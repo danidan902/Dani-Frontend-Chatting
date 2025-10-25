@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import axios from 'axios';
-import './App.css';
+import { useNavigate } from 'react-router-dom';
 
 // Icons
 const Icons = {
@@ -24,17 +24,14 @@ const Icons = {
   SAVE: '📥',
   STORY: '',
   ADD: '+',
-  MORE: '⋯'
+  MORE: '⋯',
+  HOME: '🏠'
 };
 
 // Connect to server
-const socket = io('https://dani-chat.onrender.com');
+const socket = io('http://localhost:5000');
 
-function App() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
+function ChatInterface({ currentUser, onLogout, onNavigateToHome }) {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -57,39 +54,78 @@ function App() {
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const sidebarRef = useRef(null);
+  const navigate = useNavigate();
 
-  // Base URL for images
-  const BASE_URL = 'https://dani-chat.onrender.com';
+  const BASE_URL = 'http://localhost:5000';
 
-  // Check for existing session on component mount
+  // Socket connection and event listeners
   useEffect(() => {
-    const checkExistingSession = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const savedUsername = localStorage.getItem('username');
-        
-        if (token && savedUsername) {
-          // Verify token with server
-          const response = await axios.get(`${BASE_URL}/api/verify-session`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (response.data.valid) {
-            setCurrentUser({ username: savedUsername });
-            socket.emit('join', savedUsername);
-            console.log('✅ Session restored for:', savedUsername);
-          }
-        }
-      } catch (error) {
-        console.log('No valid session found');
-        // Clear invalid session data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('username');
-      }
-    };
+    if (currentUser) {
+      socket.emit('join', currentUser.username);
+    }
 
-    checkExistingSession();
-  }, []);
+    // All your existing socket event listeners
+    socket.on('newMessage', (message) => {
+      console.log('📩 New message received:', message);
+      setMessages(prev => [...prev, message]);
+    });
+
+    socket.on('chatHistory', (history) => {
+      console.log('📚 Chat history loaded:', history.length, 'messages');
+      setMessages(history);
+    });
+
+    socket.on('usersUpdate', (usersList) => {
+      console.log('👥 Users list updated');
+      const otherUsers = usersList.filter(user => user.username !== currentUser?.username);
+      setUsers(otherUsers);
+      loadUserProfileImages(otherUsers);
+    });
+
+    socket.on('userTyping', (data) => {
+      if (data.sender === selectedUser?.username) {
+        setIsTyping(true);
+        setTimeout(() => setIsTyping(false), 1000);
+      }
+    });
+
+    socket.on('profileImageUpdated', (data) => {
+      console.log('🖼️ Profile image updated for:', data.username);
+      const fullImageUrl = `${BASE_URL}/uploads/${data.imageUrl}`;
+      setUserProfileImages(prev => ({
+        ...prev,
+        [data.username]: fullImageUrl
+      }));
+    });
+
+    return () => {
+      socket.off('newMessage');
+      socket.off('chatHistory');
+      socket.off('usersUpdate');
+      socket.off('userTyping');
+      socket.off('profileImageUpdated');
+    };
+  }, [currentUser, selectedUser]);
+
+  // All your existing useEffect hooks
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadCurrentUserProfileImage();
+      loadUsers();
+    }
+  }, [currentUser]);
 
   // Mock stories data
   useEffect(() => {
@@ -116,8 +152,7 @@ function App() {
     setStories(mockStories);
   }, [users, userProfileImages]);
 
-  // Rest of your existing useEffect hooks remain exactly the same...
-  // Detect mobile screen
+  // Mobile detection
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
@@ -130,7 +165,7 @@ function App() {
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    handleResize();
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -151,75 +186,7 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMobile, sidebarOpen]);
 
-  useEffect(() => {
-    console.log('🔌 Setting up socket listeners...');
-    
-    // Listen for new messages
-    socket.on('newMessage', (message) => {
-      console.log('📩 New message received:', message);
-      setMessages(prev => [...prev, message]);
-    });
-
-    // Listen for chat history
-    socket.on('chatHistory', (history) => {
-      console.log('📚 Chat history loaded:', history.length, 'messages');
-      setMessages(history);
-    });
-
-    // Listen for users updates
-    socket.on('usersUpdate', (usersList) => {
-      console.log('👥 Users list updated');
-      const otherUsers = usersList.filter(user => user.username !== currentUser?.username);
-      setUsers(otherUsers);
-      loadUserProfileImages(otherUsers);
-    });
-
-    // Listen for typing indicators
-    socket.on('userTyping', (data) => {
-      if (data.sender === selectedUser?.username) {
-        setIsTyping(true);
-        setTimeout(() => setIsTyping(false), 1000);
-      }
-    });
-
-    // Listen for profile image updates
-    socket.on('profileImageUpdated', (data) => {
-      console.log('🖼️ Profile image updated for:', data.username);
-      const fullImageUrl = `${BASE_URL}/uploads/${data.imageUrl}`;
-      setUserProfileImages(prev => ({
-        ...prev,
-        [data.username]: fullImageUrl
-      }));
-    });
-
-    return () => {
-      socket.off('newMessage');
-      socket.off('chatHistory');
-      socket.off('usersUpdate');
-      socket.off('userTyping');
-      socket.off('profileImageUpdated');
-    };
-  }, [currentUser, selectedUser]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  }, [darkMode]);
-
-  useEffect(() => {
-    if (currentUser) {
-      loadCurrentUserProfileImage();
-      loadUsers();
-    }
-  }, [currentUser]);
-
+  // All your existing functions (scrollToBottom, loadUsers, handleImageUpload, etc.)
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ 
       behavior: "smooth",
@@ -227,50 +194,6 @@ function App() {
     });
   };
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    if (!username.trim() || !password.trim()) return;
-    
-    setLoading(true);
-    try {
-      const endpoint = isLogin ? '/api/login' : '/api/register';
-      const payload = { username: username.trim(), password: password.trim() };
-
-      const response = await axios.post(`${BASE_URL}${endpoint}`, payload);
-      
-      if (response.data.message) {
-        // Store authentication data
-        const token = response.data.token || `token-${Date.now()}`;
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('username', username.trim());
-        
-        setCurrentUser({ username: username.trim() });
-        socket.emit('join', username.trim());
-        console.log('✅ User authenticated:', username);
-      }
-    } catch (error) {
-      alert(error.response?.data?.error || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    // Clear session data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('username');
-    
-    setCurrentUser(null);
-    setUsers([]);
-    setMessages([]);
-    setSelectedUser(null);
-    setUsername('');
-    setPassword('');
-    socket.disconnect();
-    socket.connect();
-  };
-
-  // All other existing functions remain exactly the same...
   const loadUsers = async () => {
     try {
       const response = await axios.get(`${BASE_URL}/api/users`);
@@ -365,7 +288,6 @@ function App() {
     setSelectedUser(user);
     setMessages([]);
     
-    // Close sidebar on mobile when user is selected
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -416,6 +338,10 @@ function App() {
     if (isMobile) {
       setSidebarOpen(true);
     }
+  };
+
+  const handleGoToHome = () => {
+    navigate('/home');
   };
 
   const openStories = (storyIndex = 0) => {
@@ -512,70 +438,7 @@ function App() {
     );
   };
 
-  if (!currentUser) {
-    return (
-      <div className="login-container">
-        <div className="animated-bg"></div>
-        <div className="login-box glassmorphism">
-          <div className="login-header">
-            <h2 className="gradient-text">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-            <p>{isLogin ? 'Sign in to continue chatting' : 'Join our chat community'}</p>
-          </div>
-
-          <form onSubmit={handleAuth} className="auth-form">
-            <div className="input-group">
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="modern-input"
-                required
-              />
-            </div>
-
-            <div className="input-group">
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="modern-input"
-                required
-              />
-            </div>
-
-            <button 
-              type="submit" 
-              className="modern-btn primary"
-              disabled={loading || !username.trim() || !password.trim()}
-            >
-              {loading ? '...' : (isLogin ? 'Sign In' : 'Sign Up')}
-            </button>
-          </form>
-
-          <div className="auth-footer">
-            <p>
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button 
-                type="button" 
-                className="link-btn"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setUsername('');
-                  setPassword('');
-                }}
-              >
-                {isLogin ? 'Sign Up' : 'Sign In'}
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Rest of your JSX return remains exactly the same...
+  // Your existing JSX return for chat interface
   return (
     <div className={`app ${darkMode ? 'dark-mode' : ''} ${isMobile ? 'mobile' : 'desktop'}`}>
       {/* Hidden file input */}
@@ -685,6 +548,13 @@ function App() {
           <div className="mobile-actions">
             <button 
               className="icon-btn"
+              onClick={handleGoToHome}
+              title="Go to Home"
+            >
+              {Icons.HOME}
+            </button>
+            <button 
+              className="icon-btn"
               onClick={() => setDarkMode(!darkMode)}
               title="Toggle theme"
             >
@@ -728,6 +598,13 @@ function App() {
               <div className="sidebar-actions">
                 <button 
                   className="icon-btn"
+                  onClick={handleGoToHome}
+                  title="Go to Home"
+                >
+                  {Icons.HOME}
+                </button>
+                <button 
+                  className="icon-btn"
                   onClick={() => setDarkMode(!darkMode)}
                   title="Toggle theme"
                 >
@@ -735,7 +612,7 @@ function App() {
                 </button>
                 <button 
                   className="icon-btn"
-                  onClick={handleLogout}
+                  onClick={onLogout}
                   title="Logout"
                 >
                   {Icons.LOGOUT}
@@ -832,7 +709,7 @@ function App() {
           <div className="mobile-sidebar-footer">
             <button 
               className="mobile-logout-btn modern-btn secondary"
-              onClick={handleLogout}
+              onClick={onLogout}
             >
               {Icons.LOGOUT} Logout
             </button>
@@ -865,8 +742,13 @@ function App() {
                   </div>
                 </div>
                 <div className="chat-actions">
-                  
-                  
+                  <button 
+                    className="icon-btn"
+                    onClick={handleGoToHome}
+                    title="Go to Home"
+                  >
+                    {Icons.HOME}
+                  </button>
                   <button className="icon-btn" title="More options">
                     {Icons.MORE}
                   </button>
@@ -935,9 +817,6 @@ function App() {
                 <button className="icon-btn" title="Attach file">
                   {Icons.ATTACHMENT}
                 </button>
-                {/* <button className="icon-btn" title="Emoji">
-                  {Icons.EMOJI}
-                </button> */}
               </div>
               <input
                 ref={inputRef}
@@ -995,4 +874,4 @@ function App() {
   );
 }
 
-export default App;
+export default ChatInterface;
