@@ -41,7 +41,7 @@ function App() {
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
   const [profileImage, setProfileImage] = useState(null);
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [userProfileImages, setUserProfileImages] = useState({});
@@ -52,11 +52,16 @@ function App() {
   const [stories, setStories] = useState([]);
   const [showStories, setShowStories] = useState(false);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [postComments, setPostComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const sidebarRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const commentsContainerRef = useRef(null);
 
   // Base URL for images
   const BASE_URL = 'https://dani-chat.onrender.com';
@@ -85,6 +90,16 @@ function App() {
     }));
     setStories(mockStories);
   }, [users, userProfileImages]);
+
+  // Mock comments data
+  useEffect(() => {
+    const mockComments = [
+      { id: 1, username: 'user1', text: 'This is amazing! 😍', timestamp: new Date() },
+      { id: 2, username: 'user2', text: 'Great post! 👏', timestamp: new Date() },
+      { id: 3, username: 'user3', text: 'Love this! ❤️', timestamp: new Date() }
+    ];
+    setPostComments(mockComments);
+  }, []);
 
   // Detect mobile screen
   useEffect(() => {
@@ -170,9 +185,17 @@ function App() {
     };
   }, [currentUser, selectedUser]);
 
+  // Improved scroll handling for messages
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Improved scroll handling for comments
+  useEffect(() => {
+    if (commentsOpen && commentsContainerRef.current) {
+      commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
+    }
+  }, [postComments, commentsOpen]);
 
   useEffect(() => {
     if (darkMode) {
@@ -190,10 +213,9 @@ function App() {
   }, [currentUser]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ 
-      behavior: "smooth",
-      block: "end"
-    });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   const handleAuth = async (e) => {
@@ -359,10 +381,27 @@ function App() {
     }
   };
 
+  const addComment = () => {
+    if (newComment.trim()) {
+      const comment = {
+        id: Date.now(),
+        username: currentUser.username,
+        text: newComment.trim(),
+        timestamp: new Date()
+      };
+      setPostComments(prev => [...prev, comment]);
+      setNewComment('');
+    }
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (commentsOpen) {
+        addComment();
+      } else {
+        sendMessage();
+      }
     }
   };
 
@@ -399,6 +438,10 @@ function App() {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex(prev => prev - 1);
     }
+  };
+
+  const toggleComments = () => {
+    setCommentsOpen(!commentsOpen);
   };
 
   const filteredUsers = users.filter(user => 
@@ -599,6 +642,53 @@ function App() {
           <div className="story-nav">
             <button className="story-nav-btn prev" onClick={prevStory}></button>
             <button className="story-nav-btn next" onClick={nextStory}></button>
+          </div>
+        </div>
+      )}
+
+      {/* Comments Section */}
+      {commentsOpen && (
+        <div className="comments-overlay">
+          <div className="comments-container glassmorphism">
+            <div className="comments-header">
+              <h3>Comments</h3>
+              <button className="close-comments" onClick={toggleComments}>
+                {Icons.CLOSE}
+              </button>
+            </div>
+            <div className="comments-list" ref={commentsContainerRef}>
+              {postComments.map(comment => (
+                <div key={comment.id} className="comment-item">
+                  <div className="comment-avatar">
+                    {getUserAvatar(comment.username, 'small')}
+                  </div>
+                  <div className="comment-content">
+                    <div className="comment-header">
+                      <span className="comment-username">{comment.username}</span>
+                      <span className="comment-time">{formatTime(comment.timestamp)}</span>
+                    </div>
+                    <div className="comment-text">{comment.text}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="comment-input-container">
+              <input
+                type="text"
+                placeholder="Add a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="comment-input"
+              />
+              <button 
+                onClick={addComment}
+                disabled={!newComment.trim()}
+                className="comment-send-btn"
+              >
+                {Icons.SEND}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -823,8 +913,6 @@ function App() {
                   </div>
                 </div>
                 <div className="chat-actions">
-                  
-                  
                   <button className="icon-btn" title="More options">
                     {Icons.MORE}
                   </button>
@@ -832,7 +920,7 @@ function App() {
               </div>
             )}
 
-            <div className="messages-container">
+            <div className="messages-container" ref={messagesContainerRef}>
               {filteredMessages.length === 0 ? (
                 <div className="no-messages">
                   <div className="welcome-illustration">
@@ -893,9 +981,6 @@ function App() {
                 <button className="icon-btn" title="Attach file">
                   {Icons.ATTACHMENT}
                 </button>
-                {/* <button className="icon-btn" title="Emoji">
-                  {Icons.EMOJI}
-                </button> */}
               </div>
               <input
                 ref={inputRef}
@@ -943,6 +1028,37 @@ function App() {
                 <div className="profile-actions">
                   <button className="modern-btn secondary">Edit Profile</button>
                   <button className="modern-btn secondary">Share Profile</button>
+                  <button className="modern-btn secondary" onClick={toggleComments}>
+                    {Icons.COMMENT} Comments
+                  </button>
+                </div>
+
+                {/* Sample Post with Comments */}
+                <div className="sample-post glassmorphism">
+                  <div className="post-header">
+                    {getUserAvatar(currentUser.username, 'small')}
+                    <div className="post-user-info">
+                      <span className="post-username">{currentUser.username}</span>
+                      <span className="post-time">2 hours ago</span>
+                    </div>
+                  </div>
+                  <div className="post-content">
+                    <p>Beautiful day for coding! 🚀 Working on this amazing chat app with React and Socket.io! ✨</p>
+                  </div>
+                  <div className="post-actions">
+                    <button className="post-action-btn">
+                      {Icons.HEART} 24
+                    </button>
+                    <button className="post-action-btn" onClick={toggleComments}>
+                      {Icons.COMMENT} 3
+                    </button>
+                    <button className="post-action-btn">
+                      {Icons.SHARE} Share
+                    </button>
+                    <button className="post-action-btn">
+                      {Icons.SAVE} Save
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
