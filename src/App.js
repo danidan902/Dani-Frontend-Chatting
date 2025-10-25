@@ -61,36 +61,6 @@ function App() {
   // Base URL for images
   const BASE_URL = 'https://dani-chat.onrender.com';
 
-  // Check for existing session on component mount
-  useEffect(() => {
-    const checkExistingSession = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        const savedUsername = localStorage.getItem('username');
-        
-        if (token && savedUsername) {
-          // Verify token with server
-          const response = await axios.get(`${BASE_URL}/api/verify-session`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          if (response.data.valid) {
-            setCurrentUser({ username: savedUsername });
-            socket.emit('join', savedUsername);
-            console.log('✅ Session restored for:', savedUsername);
-          }
-        }
-      } catch (error) {
-        console.log('No valid session found');
-        // Clear invalid session data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('username');
-      }
-    };
-
-    checkExistingSession();
-  }, []);
-
   // Mock stories data
   useEffect(() => {
     const mockStories = users.map(user => ({
@@ -116,7 +86,6 @@ function App() {
     setStories(mockStories);
   }, [users, userProfileImages]);
 
-  // Rest of your existing useEffect hooks remain exactly the same...
   // Detect mobile screen
   useEffect(() => {
     const handleResize = () => {
@@ -239,11 +208,6 @@ function App() {
       const response = await axios.post(`${BASE_URL}${endpoint}`, payload);
       
       if (response.data.message) {
-        // Store authentication data
-        const token = response.data.token || `token-${Date.now()}`;
-        localStorage.setItem('authToken', token);
-        localStorage.setItem('username', username.trim());
-        
         setCurrentUser({ username: username.trim() });
         socket.emit('join', username.trim());
         console.log('✅ User authenticated:', username);
@@ -256,10 +220,6 @@ function App() {
   };
 
   const handleLogout = () => {
-    // Clear session data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('username');
-    
     setCurrentUser(null);
     setUsers([]);
     setMessages([]);
@@ -270,7 +230,6 @@ function App() {
     socket.connect();
   };
 
-  // All other existing functions remain exactly the same...
   const loadUsers = async () => {
     try {
       const response = await axios.get(`${BASE_URL}/api/users`);
@@ -575,7 +534,6 @@ function App() {
     );
   }
 
-  // Rest of your JSX return remains exactly the same...
   return (
     <div className={`app ${darkMode ? 'dark-mode' : ''} ${isMobile ? 'mobile' : 'desktop'}`}>
       {/* Hidden file input */}
@@ -945,7 +903,7 @@ function App() {
                 placeholder={`Message ${selectedUser.username}...`}
                 value={newMessage}
                 onChange={(e) => {
-                  setNewMessage(e.value);
+                  setNewMessage(e.target.value);
                   handleTyping();
                 }}
                 onKeyPress={handleKeyPress}
