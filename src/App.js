@@ -28,7 +28,7 @@ const Icons = {
 };
 
 // Connect to server
-const socket = io('http://localhost:5000');
+const socket = io('https://dani-chat.onrender.com');
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -59,7 +59,7 @@ function App() {
   const sidebarRef = useRef(null);
 
   // Base URL for images
-  const BASE_URL = 'http://localhost:5000';
+  const BASE_URL = 'https://dani-chat.onrender.com';
 
   // Mock stories data
   useEffect(() => {
