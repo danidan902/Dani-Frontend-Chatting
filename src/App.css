@@ -1895,6 +1895,275 @@ button, input, .user-item, .message {
 
 
 
+/* Add these styles to your App.css file */
+
+/* Mobile scrolling fixes */
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Prevent navbar from scrolling with chat */
+.mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Mobile chat area adjustments */
+.mobile-chat .messages-container {
+  padding-top: 70px; /* Account for fixed header */
+  padding-bottom: 80px; /* Account for input */
+  height: calc(100vh - 140px);
+}
+
+.mobile-chat .message-input-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* Comments section styles */
+.comments-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+}
+
+.comments-container {
+  flex: 1;
+  margin: 20px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.comments-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-comments {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.comments-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.comment-item {
+  display: flex;
+  margin-bottom: 15px;
+  align-items: flex-start;
+}
+
+.comment-avatar {
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.comment-content {
+  flex: 1;
+  background: var(--bg-secondary);
+  padding: 12px 15px;
+  border-radius: 18px;
+  border-top-left-radius: 5px;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.comment-username {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.comment-text {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.comment-input-container {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.comment-input {
+  flex: 1;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 12px 15px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.comment-send-btn {
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 16px;
+}
+
+.comment-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sample post styles */
+.sample-post {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 15px;
+  background: var(--bg-secondary);
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.post-user-info {
+  margin-left: 10px;
+}
+
+.post-username {
+  font-weight: 600;
+  display: block;
+  font-size: 14px;
+}
+
+.post-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.post-content {
+  margin-bottom: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.post-actions {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+}
+
+.post-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Improved scrolling for mobile */
+@media (max-width: 768px) {
+  .messages-container {
+    padding-bottom: 20px;
+  }
+  
+  .chat-area {
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .comments-container {
+    margin: 10px;
+  }
+  
+  .comments-list {
+    padding: 10px;
+  }
+}
+
+/* Dark mode improvements */
+.dark-mode .comment-content {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .comment-input {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .sample-post {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+
+
+
+
+
 
 
 
