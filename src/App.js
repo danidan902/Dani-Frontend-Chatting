@@ -100,11 +100,16 @@ function App() {
     const canvas = backgroundRef.current;
     const ctx = canvas.getContext('2d');
     
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
     const particles = [];
-    const particleCount = backgroundEffect === 'particles' ? 100 : 50;
+    const particleCount = isMobile ? 50 : 100;
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -160,6 +165,8 @@ function App() {
     };
 
     animate();
+
+    return () => window.removeEventListener('resize', resizeCanvas);
   };
 
   // Enhanced socket listeners
@@ -432,20 +439,6 @@ function App() {
         sender: currentUser.username,
         receiver: selectedUser.username,
         content: newMessage.trim()
-      };
-      
-      socket.emit('sendMessage', messageData);
-      setNewMessage('');
-    }
-  };
-
-  const sendMessageWithEffect = (effect) => {
-    if (newMessage.trim() && selectedUser) {
-      const messageData = {
-        sender: currentUser.username,
-        receiver: selectedUser.username,
-        content: newMessage.trim(),
-        effect: effect
       };
       
       socket.emit('sendMessage', messageData);
@@ -940,7 +933,7 @@ function App() {
   }
 
   return (
-    <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : 'desktop'}`}>
+    <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : 'desktop'} ${selectedUser ? 'chat-active' : ''}`}>
       {/* Background Canvas */}
       <canvas ref={backgroundRef} className="background-canvas"></canvas>
 
@@ -1011,8 +1004,8 @@ function App() {
         {selectedUser ? renderChatScreen() : renderContent()}
       </div>
 
-      {/* Enhanced Bottom Navigation */}
-      {!selectedUser && (
+      {/* Enhanced Bottom Navigation - Only show on mobile when not in chat */}
+      {!selectedUser && isMobile && (
         <nav className="bottom-nav magical-section">
           <button 
             className={`nav-item ${activeNav === 'chats' ? 'active' : ''}`}
