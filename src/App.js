@@ -789,8 +789,8 @@ function App() {
           </div>
         </div>
         <div className="chat-actions">
-          <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
-          <button className="icon-btn magical-btn">{Icons.MORE}</button>
+          // <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
+          // <button className="icon-btn magical-btn">{Icons.MORE}</button>
         </div>
       </div>
 
@@ -841,11 +841,11 @@ function App() {
 
       {/* Enhanced Message Input */}
       <div className="message-input-container magical-section">
-        // <div className="input-actions">
-        //   <button className="icon-btn magical-btn">{Icons.EMOJI}</button>
-        //   <button className="icon-btn magical-btn">{Icons.ATTACHMENT}</button>
-        //   <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
-        // </div>
+        <div className="input-actions">
+          // <button className="icon-btn magical-btn">{Icons.EMOJI}</button>
+          // <button className="icon-btn magical-btn">{Icons.ATTACHMENT}</button>
+          // <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
+        </div>
         <input
           type="text"
           placeholder="Type a magical message..."
