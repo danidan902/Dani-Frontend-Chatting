@@ -840,12 +840,14 @@ function App() {
       </div>
 
       {/* Enhanced Message Input */}
-      <div className="message-input-container magical-section">
-        <div className="input-actions">
-          // <button className="icon-btn magical-btn">{Icons.EMOJI}</button>
-          // <button className="icon-btn magical-btn">{Icons.ATTACHMENT}</button>
-          // <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
-        </div>
+      <div className=" ">
+        // <div className="input-actions">
+        //   <button className="icon-btn magical-btn">{Icons.EMOJI}</button>
+        //   <button className="icon-btn magical-btn">{Icons.ATTACHMENT}</button>
+        //   <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
+        // </div>
+        // message-input-container
+        // magical-section
         <input
           type="text"
           placeholder="Type a magical message..."
