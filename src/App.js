@@ -5,7 +5,7 @@ import './App.css';
 
 // Enhanced Icons
 const Icons = {
-  SEND: '➤',
+  SEND: '🚀',
   ONLINE: '🟢',
   OFFLINE: '⚫',
   TYPING: '✍️',
@@ -22,14 +22,24 @@ const Icons = {
   COMMENT: '💬',
   SHARE: '📤',
   SAVE: '📥',
-  STORY: '🌟',
+  STORY: '🌈',
   ADD: '+',
   MORE: '⋯',
   HOME: '🏠',
   CHAT: '💬',
   PROFILE: '👤',
   NOTIFICATION: '🔔',
-  SETTINGS: '⚙️'
+  SETTINGS: '⚙️',
+  VOICE: '🎤',
+  GIFT: '🎁',
+  GAME: '🎮',
+  MUSIC: '🎵',
+  STAR: '⭐',
+  FIRE: '🔥',
+  LIKE: '👍',
+  DISLIKE: '👎',
+  PARTY: '🎉',
+  MAGIC: '✨'
 };
 
 // Connect to server
@@ -58,10 +68,13 @@ function App() {
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [messageEffects, setMessageEffects] = useState({});
+  const [backgroundEffect, setBackgroundEffect] = useState('particles');
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const backgroundRef = useRef(null);
 
   // Base URL for images
   const BASE_URL = 'https://dani-chat.onrender.com';
@@ -76,6 +89,79 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Initialize background animations
+  useEffect(() => {
+    if (backgroundRef.current) {
+      initializeBackgroundEffects();
+    }
+  }, [backgroundEffect, darkMode]);
+
+  const initializeBackgroundEffects = () => {
+    const canvas = backgroundRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const particleCount = backgroundEffect === 'particles' ? 100 : 50;
+
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 3 + 1,
+        speedX: (Math.random() - 0.5) * 2,
+        speedY: (Math.random() - 0.5) * 2,
+        color: darkMode 
+          ? `hsl(${Math.random() * 360}, 70%, 60%)`
+          : `hsl(${Math.random() * 360}, 100%, 70%)`
+      });
+    }
+
+    const animate = () => {
+      ctx.fillStyle = darkMode ? 'rgba(10, 10, 20, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((particle, index) => {
+        particle.x += particle.speedX;
+        particle.y += particle.speedY;
+
+        if (particle.x > canvas.width) particle.x = 0;
+        if (particle.x < 0) particle.x = canvas.width;
+        if (particle.y > canvas.height) particle.y = 0;
+        if (particle.y < 0) particle.y = canvas.height;
+
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fillStyle = particle.color;
+        ctx.fill();
+
+        // Draw connections
+        for (let j = index + 1; j < particles.length; j++) {
+          const dx = particle.x - particles[j].x;
+          const dy = particle.y - particles[j].y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < 100) {
+            ctx.beginPath();
+            ctx.strokeStyle = darkMode 
+              ? `rgba(255, 255, 255, ${0.2 * (1 - distance / 100)})`
+              : `rgba(0, 0, 0, ${0.1 * (1 - distance / 100)})`;
+            ctx.lineWidth = 0.5;
+            ctx.moveTo(particle.x, particle.y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+  };
+
   // Enhanced socket listeners
   useEffect(() => {
     console.log('🔌 Setting up socket listeners...');
@@ -83,6 +169,13 @@ function App() {
     socket.on('newMessage', (message) => {
       console.log('📩 New message received:', message);
       setMessages(prev => [...prev, message]);
+      
+      // Add message effect
+      setMessageEffects(prev => ({
+        ...prev,
+        [message._id || Date.now()]: 'pop'
+      }));
+
       if (message.sender !== currentUser?.username) {
         setUnreadCount(prev => prev + 1);
         addNotification('message', `${message.sender} sent you a message`);
@@ -151,16 +244,23 @@ function App() {
     const mockStories = [
       {
         id: 1,
-        username: 'user1',
+        username: 'alex_johnson',
         avatar: null,
-        stories: [{ id: 1, type: 'text', content: 'Hello from user1! 👋', duration: 5000 }],
+        stories: [{ id: 1, type: 'text', content: 'Exploring new horizons! 🌟', duration: 5000 }],
         seen: false
       },
       {
         id: 2,
-        username: 'user2',
+        username: 'sarah_m',
         avatar: null,
-        stories: [{ id: 1, type: 'text', content: 'Beautiful day! 🌟', duration: 5000 }],
+        stories: [{ id: 1, type: 'text', content: 'Beautiful day! ☀️', duration: 5000 }],
+        seen: false
+      },
+      {
+        id: 3,
+        username: 'mike_t',
+        avatar: null,
+        stories: [{ id: 1, type: 'text', content: 'Coding marathon! 💻', duration: 5000 }],
         seen: false
       }
     ];
@@ -290,7 +390,7 @@ function App() {
           imageUrl: response.data.imageUrl
         });
         
-        alert('Profile image updated successfully!');
+        addNotification('success', 'Profile image updated successfully!');
       }
     } catch (error) {
       console.error('Error uploading profile image:', error);
@@ -332,6 +432,20 @@ function App() {
         sender: currentUser.username,
         receiver: selectedUser.username,
         content: newMessage.trim()
+      };
+      
+      socket.emit('sendMessage', messageData);
+      setNewMessage('');
+    }
+  };
+
+  const sendMessageWithEffect = (effect) => {
+    if (newMessage.trim() && selectedUser) {
+      const messageData = {
+        sender: currentUser.username,
+        receiver: selectedUser.username,
+        content: newMessage.trim(),
+        effect: effect
       };
       
       socket.emit('sendMessage', messageData);
@@ -393,12 +507,12 @@ function App() {
 
   const getRandomGradient = (username) => {
     const gradients = [
-      'linear-gradient(45deg, #ff9a9e 0%, #fad0c4 100%)',
-      'linear-gradient(45deg, #a1c4fd 0%, #c2e9fb 100%)',
-      'linear-gradient(45deg, #ffecd2 0%, #fcb69f 100%)',
-      'linear-gradient(45deg, #84fab0 0%, #8fd3f4 100%)',
-      'linear-gradient(45deg, #d4fc79 0%, #96e6a1 100%)',
-      'linear-gradient(45deg, #a6c0fe 0%, #f68084 100%)'
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
     ];
     
     const index = username.charCodeAt(0) % gradients.length;
@@ -465,19 +579,37 @@ function App() {
 
   const renderChatsScreen = () => (
     <div className="chats-screen">
-      <div className="stories-section">
+      {/* Animated Header */}
+      <div className="screen-header animated-header">
+        <div className="header-content">
+          <h1 className="gradient-text">Messages</h1>
+          <div className="header-actions">
+            <button className="icon-btn magical-btn" onClick={() => setBackgroundEffect(
+              backgroundEffect === 'particles' ? 'waves' : 'particles'
+            )}>
+              {Icons.MAGIC}
+            </button>
+            <button className="icon-btn magical-btn" onClick={() => setDarkMode(!darkMode)}>
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Stories Section */}
+      <div className="stories-section magical-section">
         <div className="stories-container">
-          <div className="your-story-item" onClick={() => openStories()}>
+          <div className="your-story-item magical-card" onClick={() => openStories()}>
             <div className="story-avatar-wrapper">
               {getUserAvatar(currentUser.username, 'large', false)}
-              <div className="add-story-icon">+</div>
+              <div className="add-story-icon magical-glow">+</div>
             </div>
             <div className="story-label">Your Story</div>
           </div>
           {stories.map((story, index) => (
             <div 
               key={story.id} 
-              className="story-item"
+              className="story-item magical-card"
               onClick={() => openStories(index)}
             >
               <div className="story-avatar-wrapper">
@@ -489,15 +621,30 @@ function App() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="search-section magical-section">
+        <div className="search-container magical-input">
+          <span className="search-icon">{Icons.SEARCH}</span>
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+      </div>
+
+      {/* Chats List */}
       <div className="chats-list">
         <div className="section-header">
-          <h3>Recent Chats</h3>
-          <button className="icon-btn">{Icons.EDIT}</button>
+          <h2 className="section-title">Recent Conversations</h2>
+          <button className="icon-btn magical-btn">{Icons.EDIT}</button>
         </div>
         {filteredUsers.map(user => (
           <div
             key={user.username}
-            className="chat-item"
+            className="chat-item magical-card hover-lift"
             onClick={() => selectUser(user)}
           >
             <div className="chat-avatar">
@@ -509,12 +656,13 @@ function App() {
                 <span className="chat-time">12:30 PM</span>
               </div>
               <div className="chat-preview">
-                <span className="last-message">Last message preview...</span>
+                <span className="last-message">Tap to start conversation...</span>
                 {unreadCount > 0 && (
-                  <span className="unread-badge">{unreadCount}</span>
+                  <span className="unread-badge magical-glow">{unreadCount}</span>
                 )}
               </div>
             </div>
+            <div className="chat-arrow">→</div>
           </div>
         ))}
       </div>
@@ -523,13 +671,13 @@ function App() {
 
   const renderStatusScreen = () => (
     <div className="status-screen">
-      <div className="status-header">
-        <h3>Status Updates</h3>
-        <button className="icon-btn">{Icons.CAMERA}</button>
+      <div className="screen-header">
+        <h1>Status Updates</h1>
+        <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
       </div>
       <div className="status-list">
         {stories.map(story => (
-          <div key={story.id} className="status-item">
+          <div key={story.id} className="status-item magical-card">
             <div className="status-avatar">
               {getUserAvatar(story.username, 'normal', true)}
             </div>
@@ -545,12 +693,12 @@ function App() {
 
   const renderCallsScreen = () => (
     <div className="calls-screen">
-      <div className="calls-header">
-        <h3>Recent Calls</h3>
+      <div className="screen-header">
+        <h1>Recent Calls</h1>
       </div>
       <div className="calls-list">
         {users.slice(0, 5).map(user => (
-          <div key={user.username} className="call-item">
+          <div key={user.username} className="call-item magical-card">
             <div className="call-avatar">
               {getUserAvatar(user.username, 'normal')}
             </div>
@@ -558,7 +706,7 @@ function App() {
               <span className="call-username">{user.username}</span>
               <span className="call-type">Outgoing • 5:30</span>
             </div>
-            <button className="call-btn">{Icons.CAMERA}</button>
+            <button className="call-btn magical-btn">{Icons.CAMERA}</button>
           </div>
         ))}
       </div>
@@ -567,44 +715,66 @@ function App() {
 
   const renderProfileScreen = () => (
     <div className="profile-screen">
-      <div className="profile-header">
+      <div className="profile-header magical-section">
         {getUserAvatar(currentUser.username, 'xlarge')}
-        <h2>{currentUser.username}</h2>
-        <p>Welcome to your profile</p>
+        <h1 className="gradient-text">{currentUser.username}</h1>
+        <p>Welcome to your magical profile! ✨</p>
       </div>
-      <div className="profile-stats">
-        <div className="stat-item">
+      
+      <div className="profile-stats magical-section">
+        <div className="stat-item magical-card">
           <strong>125</strong>
           <span>Posts</span>
         </div>
-        <div className="stat-item">
+        <div className="stat-item magical-card">
           <strong>1.2K</strong>
           <span>Followers</span>
         </div>
-        <div className="stat-item">
+        <div className="stat-item magical-card">
           <strong>356</strong>
           <span>Following</span>
         </div>
       </div>
+      
       <div className="profile-actions">
-        <button className="modern-btn primary">Edit Profile</button>
+        <button className="modern-btn primary magical-btn">Edit Profile</button>
         <button 
-          className="modern-btn secondary"
+          className="modern-btn secondary magical-btn"
           onClick={() => setShowImageUpload(true)}
         >
           Change Photo
         </button>
-        <button className="modern-btn secondary" onClick={handleLogout}>
+        <button className="modern-btn secondary magical-btn" onClick={handleLogout}>
           Logout
         </button>
+      </div>
+
+      {/* Theme Selector */}
+      <div className="theme-selector magical-section">
+        <h3>Background Effects</h3>
+        <div className="theme-options">
+          <button 
+            className={`theme-option ${backgroundEffect === 'particles' ? 'active' : ''}`}
+            onClick={() => setBackgroundEffect('particles')}
+          >
+            Particles
+          </button>
+          <button 
+            className={`theme-option ${backgroundEffect === 'waves' ? 'active' : ''}`}
+            onClick={() => setBackgroundEffect('waves')}
+          >
+            Waves
+          </button>
+        </div>
       </div>
     </div>
   );
 
   const renderChatScreen = () => (
     <>
-      <div className="chat-header">
-        <button className="back-btn" onClick={handleBackToChats}>
+      {/* Chat Header */}
+      <div className="chat-header magical-header">
+        <button className="back-btn magical-btn" onClick={handleBackToChats}>
           {Icons.BACK}
         </button>
         <div className="chat-user-info">
@@ -612,33 +782,51 @@ function App() {
           <div className="user-details">
             <div className="username">{selectedUser.username}</div>
             <div className="user-status">
-              {isTyping ? 'typing...' : selectedUser.online ? 'online' : 'offline'}
+              {isTyping ? (
+                <div className="typing-animation">
+                  <span>typing</span>
+                  <div className="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              ) : selectedUser.online ? 'online' : 'offline'}
             </div>
           </div>
         </div>
         <div className="chat-actions">
-          <button className="icon-btn">{Icons.CAMERA}</button>
-          <button className="icon-btn">{Icons.MORE}</button>
+          <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
+          <button className="icon-btn magical-btn">{Icons.MORE}</button>
         </div>
       </div>
 
+      {/* Messages Container */}
       <div className="messages-container" ref={messagesContainerRef}>
         {filteredMessages.length === 0 ? (
-          <div className="no-messages">
+          <div className="no-messages magical-section">
             <div className="welcome-illustration">
               {getUserAvatar(selectedUser.username, 'xlarge')}
             </div>
-            <h3>No messages yet</h3>
-            <p>Start a conversation with {selectedUser.username}</p>
+            <h2>Start a Conversation</h2>
+            <p>Send your first message to {selectedUser.username}</p>
+            <div className="welcome-effects">
+              <span className="effect-dot magical-glow"></span>
+              <span className="effect-dot magical-glow"></span>
+              <span className="effect-dot magical-glow"></span>
+            </div>
           </div>
         ) : (
           filteredMessages.map((message, index) => (
             <div
               key={message._id || index}
-              className={`message ${message.sender === currentUser.username ? 'sent' : 'received'}`}
+              className={`message ${message.sender === currentUser.username ? 'sent' : 'received'} ${
+                messageEffects[message._id] || ''
+              }`}
             >
-              <div className="message-content">
+              <div className="message-content magical-card">
                 {message.content}
+                {message.effect && <div className="message-effect">{message.effect}</div>}
               </div>
               <div className="message-time">
                 {formatTime(message.timestamp)}
@@ -653,31 +841,39 @@ function App() {
               <span></span>
               <span></span>
             </div>
-            <span>typing...</span>
+            <span>{selectedUser.username} is typing</span>
           </div>
         )}
       </div>
 
-      <div className="message-input-container">
-        <button className="icon-btn attachment-btn">{Icons.ATTACHMENT}</button>
+      {/* Enhanced Message Input */}
+      <div className="message-input-container magical-section">
+        <div className="input-actions">
+          <button className="icon-btn magical-btn">{Icons.EMOJI}</button>
+          <button className="icon-btn magical-btn">{Icons.ATTACHMENT}</button>
+          <button className="icon-btn magical-btn">{Icons.CAMERA}</button>
+        </div>
         <input
           type="text"
-          placeholder="Type a message..."
+          placeholder="Type a magical message..."
           value={newMessage}
           onChange={(e) => {
             setNewMessage(e.target.value);
             handleTyping();
           }}
           onKeyPress={handleKeyPress}
-          className="message-input"
+          className="message-input magical-input"
         />
-        <button 
-          onClick={sendMessage} 
-          disabled={!newMessage.trim()}
-          className="send-btn"
-        >
-          {Icons.SEND}
-        </button>
+        <div className="send-actions">
+          <button className="icon-btn magical-btn">{Icons.VOICE}</button>
+          <button 
+            onClick={sendMessage} 
+            disabled={!newMessage.trim()}
+            className="send-btn magical-glow"
+          >
+            {Icons.SEND}
+          </button>
+        </div>
       </div>
     </>
   );
@@ -685,21 +881,21 @@ function App() {
   if (!currentUser) {
     return (
       <div className="auth-container">
-        <div className="auth-background"></div>
-        <div className="auth-box">
+        <canvas ref={backgroundRef} className="background-canvas"></canvas>
+        <div className="auth-box magical-card">
           <div className="auth-header">
-            <h1>ChatApp</h1>
-            <p>{isLogin ? 'Welcome back!' : 'Create your account'}</p>
+            <h1 className="gradient-text">MagicChat</h1>
+            <p>{isLogin ? 'Welcome back to the magic! ✨' : 'Join our magical community! 🌟'}</p>
           </div>
           
           <form onSubmit={handleAuth} className="auth-form">
             <div className="input-group">
               <input
                 type="text"
-                placeholder="Username"
+                placeholder="✨ Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="auth-input"
+                className="auth-input magical-input"
                 required
               />
             </div>
@@ -707,32 +903,34 @@ function App() {
             <div className="input-group">
               <input
                 type="password"
-                placeholder="Password"
+                placeholder="🔒 Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="auth-input"
+                className="auth-input magical-input"
                 required
               />
             </div>
             
             <button 
               type="submit" 
-              className="auth-button primary"
+              className="auth-button primary magical-btn"
               disabled={loading}
             >
-              {loading ? '...' : (isLogin ? 'Sign In' : 'Sign Up')}
+              {loading ? (
+                <div className="loading-spinner"></div>
+              ) : isLogin ? 'Sign In' : 'Create Account'}
             </button>
           </form>
           
           <div className="auth-footer">
             <p>
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {isLogin ? "New to magic? " : "Already have magic? "}
               <button 
                 type="button"
-                className="link-button"
+                className="link-button magical-text"
                 onClick={() => setIsLogin(!isLogin)}
               >
-                {isLogin ? 'Sign Up' : 'Sign In'}
+                {isLogin ? 'Create Account' : 'Sign In'}
               </button>
             </p>
           </div>
@@ -743,6 +941,9 @@ function App() {
 
   return (
     <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : 'desktop'}`}>
+      {/* Background Canvas */}
+      <canvas ref={backgroundRef} className="background-canvas"></canvas>
+
       {/* Hidden file input */}
       <input
         type="file"
@@ -755,19 +956,19 @@ function App() {
       {/* Profile Image Upload Modal */}
       {showImageUpload && (
         <div className="modal-overlay" onClick={() => setShowImageUpload(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Update Profile Image</h3>
-            <p>Choose a new profile picture</p>
+          <div className="modal-content magical-card" onClick={(e) => e.stopPropagation()}>
+            <h3>✨ Update Profile Image</h3>
+            <p>Choose a magical new profile picture</p>
             <div className="modal-actions">
               <button 
                 onClick={triggerFileInput}
-                className="modern-btn primary"
+                className="modern-btn primary magical-btn"
               >
                 {Icons.CAMERA} Choose Image
               </button>
               <button 
                 onClick={() => setShowImageUpload(false)}
-                className="modern-btn secondary"
+                className="modern-btn secondary magical-btn"
               >
                 Cancel
               </button>
@@ -783,19 +984,19 @@ function App() {
             <div className="story-progress">
               {stories[currentStoryIndex]?.stories.map((_, index) => (
                 <div key={index} className="progress-bar">
-                  <div className="progress-fill"></div>
+                  <div className="progress-fill magical-glow"></div>
                 </div>
               ))}
             </div>
             <div className="story-user-info">
               {getUserAvatar(stories[currentStoryIndex]?.username, 'small')}
               <span>{stories[currentStoryIndex]?.username}</span>
-              <button className="close-story" onClick={closeStories}>
+              <button className="close-story magical-btn" onClick={closeStories}>
                 {Icons.CLOSE}
               </button>
             </div>
           </div>
-          <div className="story-content">
+          <div className="story-content magical-card">
             {stories[currentStoryIndex]?.stories[0]?.content}
           </div>
           <div className="story-nav">
@@ -810,16 +1011,16 @@ function App() {
         {selectedUser ? renderChatScreen() : renderContent()}
       </div>
 
-      {/* Static Bottom Navigation Bar */}
+      {/* Enhanced Bottom Navigation */}
       {!selectedUser && (
-        <nav className="bottom-nav">
+        <nav className="bottom-nav magical-section">
           <button 
             className={`nav-item ${activeNav === 'chats' ? 'active' : ''}`}
             onClick={() => setActiveNav('chats')}
           >
-            <span className="nav-icon">{Icons.CHAT}</span>
+            <span className="nav-icon magical-glow">{Icons.CHAT}</span>
             <span className="nav-label">Chats</span>
-            {unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+            {unreadCount > 0 && <span className="nav-badge magical-glow">{unreadCount}</span>}
           </button>
           
           <button 
