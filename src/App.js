@@ -3,15 +3,15 @@ import io from 'socket.io-client';
 import axios from 'axios';
 import './App.css';
 
-// Icons
+// Enhanced Icons
 const Icons = {
   SEND: '➤',
   ONLINE: '🟢',
   OFFLINE: '⚫',
   TYPING: '✍️',
   SEARCH: '🔍',
-  ATTACHMENT: '+',
-  EMOJI: '',
+  ATTACHMENT: '📎',
+  EMOJI: '😊',
   MENU: '☰',
   CLOSE: '✕',
   CAMERA: '📷',
@@ -22,9 +22,14 @@ const Icons = {
   COMMENT: '💬',
   SHARE: '📤',
   SAVE: '📥',
-  STORY: '',
+  STORY: '🌟',
   ADD: '+',
-  MORE: '⋯'
+  MORE: '⋯',
+  HOME: '🏠',
+  CHAT: '💬',
+  PROFILE: '👤',
+  NOTIFICATION: '🔔',
+  SETTINGS: '⚙️'
 };
 
 // Connect to server
@@ -41,116 +46,54 @@ function App() {
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
+  const [darkMode, setDarkMode] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [userProfileImages, setUserProfileImages] = useState({});
   const [loading, setLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeNav, setActiveNav] = useState('chats');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [activeTab, setActiveTab] = useState('chats');
   const [stories, setStories] = useState([]);
   const [showStories, setShowStories] = useState(false);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [postComments, setPostComments] = useState([]);
-  const [newComment, setNewComment] = useState('');
-  
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
   const fileInputRef = useRef(null);
-  const sidebarRef = useRef(null);
   const messagesContainerRef = useRef(null);
-  const commentsContainerRef = useRef(null);
 
   // Base URL for images
   const BASE_URL = 'https://dani-chat.onrender.com';
 
-  // Mock stories data
-  useEffect(() => {
-    const mockStories = users.map(user => ({
-      id: user.username,
-      username: user.username,
-      avatar: userProfileImages[user.username] || null,
-      stories: [
-        {
-          id: 1,
-          type: 'text',
-          content: `Hello from ${user.username}! 👋`,
-          duration: 5000
-        },
-        {
-          id: 2,
-          type: 'text',
-          content: 'Having a great day! 🌟',
-          duration: 5000
-        }
-      ],
-      seen: false
-    }));
-    setStories(mockStories);
-  }, [users, userProfileImages]);
-
-  // Mock comments data
-  useEffect(() => {
-    const mockComments = [
-      { id: 1, username: 'user1', text: 'This is amazing! 😍', timestamp: new Date() },
-      { id: 2, username: 'user2', text: 'Great post! 👏', timestamp: new Date() },
-      { id: 3, username: 'user3', text: 'Love this! ❤️', timestamp: new Date() }
-    ];
-    setPostComments(mockComments);
-  }, []);
-
-  // Detect mobile screen
+  // Enhanced mobile detection
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth <= 768;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
+      setIsMobile(window.innerWidth <= 768);
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
-
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close sidebar when clicking outside on mobile
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isMobile && 
-          sidebarOpen && 
-          sidebarRef.current && 
-          !sidebarRef.current.contains(event.target) &&
-          !event.target.closest('.menu-toggle')) {
-        setSidebarOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isMobile, sidebarOpen]);
-
+  // Enhanced socket listeners
   useEffect(() => {
     console.log('🔌 Setting up socket listeners...');
     
-    // Listen for new messages
     socket.on('newMessage', (message) => {
       console.log('📩 New message received:', message);
       setMessages(prev => [...prev, message]);
+      if (message.sender !== currentUser?.username) {
+        setUnreadCount(prev => prev + 1);
+        addNotification('message', `${message.sender} sent you a message`);
+      }
     });
 
-    // Listen for chat history
     socket.on('chatHistory', (history) => {
       console.log('📚 Chat history loaded:', history.length, 'messages');
       setMessages(history);
     });
 
-    // Listen for users updates
     socket.on('usersUpdate', (usersList) => {
       console.log('👥 Users list updated');
       const otherUsers = usersList.filter(user => user.username !== currentUser?.username);
@@ -158,7 +101,6 @@ function App() {
       loadUserProfileImages(otherUsers);
     });
 
-    // Listen for typing indicators
     socket.on('userTyping', (data) => {
       if (data.sender === selectedUser?.username) {
         setIsTyping(true);
@@ -166,7 +108,6 @@ function App() {
       }
     });
 
-    // Listen for profile image updates
     socket.on('profileImageUpdated', (data) => {
       console.log('🖼️ Profile image updated for:', data.username);
       const fullImageUrl = `${BASE_URL}/uploads/${data.imageUrl}`;
@@ -185,17 +126,10 @@ function App() {
     };
   }, [currentUser, selectedUser]);
 
-  // Improved scroll handling for messages
+  // Enhanced scroll handling
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Improved scroll handling for comments
-  useEffect(() => {
-    if (commentsOpen && commentsContainerRef.current) {
-      commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
-    }
-  }, [postComments, commentsOpen]);
 
   useEffect(() => {
     if (darkMode) {
@@ -209,8 +143,40 @@ function App() {
     if (currentUser) {
       loadCurrentUserProfileImage();
       loadUsers();
+      initializeStories();
     }
   }, [currentUser]);
+
+  const initializeStories = () => {
+    const mockStories = [
+      {
+        id: 1,
+        username: 'user1',
+        avatar: null,
+        stories: [{ id: 1, type: 'text', content: 'Hello from user1! 👋', duration: 5000 }],
+        seen: false
+      },
+      {
+        id: 2,
+        username: 'user2',
+        avatar: null,
+        stories: [{ id: 1, type: 'text', content: 'Beautiful day! 🌟', duration: 5000 }],
+        seen: false
+      }
+    ];
+    setStories(mockStories);
+  };
+
+  const addNotification = (type, message) => {
+    const notification = {
+      id: Date.now(),
+      type,
+      message,
+      timestamp: new Date(),
+      read: false
+    };
+    setNotifications(prev => [notification, ...prev.slice(0, 9)]);
+  };
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -298,11 +264,6 @@ function App() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size should be less than 5MB');
-      return;
-    }
-
     const formData = new FormData();
     formData.append('profileImage', file);
     formData.append('username', currentUser.username);
@@ -345,11 +306,8 @@ function App() {
     console.log('💬 Selected user:', user.username);
     setSelectedUser(user);
     setMessages([]);
-    
-    // Close sidebar on mobile when user is selected
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
+    setActiveNav('chat');
+    setUnreadCount(0);
     
     socket.emit('getChatHistory', {
       user1: currentUser.username,
@@ -381,39 +339,16 @@ function App() {
     }
   };
 
-  const addComment = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: Date.now(),
-        username: currentUser.username,
-        text: newComment.trim(),
-        timestamp: new Date()
-      };
-      setPostComments(prev => [...prev, comment]);
-      setNewComment('');
-    }
-  };
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (commentsOpen) {
-        addComment();
-      } else {
-        sendMessage();
-      }
+      sendMessage();
     }
-  };
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
   };
 
   const handleBackToChats = () => {
     setSelectedUser(null);
-    if (isMobile) {
-      setSidebarOpen(true);
-    }
+    setActiveNav('chats');
   };
 
   const openStories = (storyIndex = 0) => {
@@ -438,10 +373,6 @@ function App() {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex(prev => prev - 1);
     }
-  };
-
-  const toggleComments = () => {
-    setCommentsOpen(!commentsOpen);
   };
 
   const filteredUsers = users.filter(user => 
@@ -514,16 +445,253 @@ function App() {
     );
   };
 
+  // Render different screens based on activeNav
+  const renderContent = () => {
+    switch (activeNav) {
+      case 'chats':
+        return renderChatsScreen();
+      case 'status':
+        return renderStatusScreen();
+      case 'calls':
+        return renderCallsScreen();
+      case 'profile':
+        return renderProfileScreen();
+      case 'chat':
+        return renderChatScreen();
+      default:
+        return renderChatsScreen();
+    }
+  };
+
+  const renderChatsScreen = () => (
+    <div className="chats-screen">
+      <div className="stories-section">
+        <div className="stories-container">
+          <div className="your-story-item" onClick={() => openStories()}>
+            <div className="story-avatar-wrapper">
+              {getUserAvatar(currentUser.username, 'large', false)}
+              <div className="add-story-icon">+</div>
+            </div>
+            <div className="story-label">Your Story</div>
+          </div>
+          {stories.map((story, index) => (
+            <div 
+              key={story.id} 
+              className="story-item"
+              onClick={() => openStories(index)}
+            >
+              <div className="story-avatar-wrapper">
+                {getUserAvatar(story.username, 'large', true)}
+              </div>
+              <div className="story-label">{story.username}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="chats-list">
+        <div className="section-header">
+          <h3>Recent Chats</h3>
+          <button className="icon-btn">{Icons.EDIT}</button>
+        </div>
+        {filteredUsers.map(user => (
+          <div
+            key={user.username}
+            className="chat-item"
+            onClick={() => selectUser(user)}
+          >
+            <div className="chat-avatar">
+              {getUserAvatar(user.username, 'normal', true)}
+            </div>
+            <div className="chat-info">
+              <div className="chat-header">
+                <span className="chat-username">{user.username}</span>
+                <span className="chat-time">12:30 PM</span>
+              </div>
+              <div className="chat-preview">
+                <span className="last-message">Last message preview...</span>
+                {unreadCount > 0 && (
+                  <span className="unread-badge">{unreadCount}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderStatusScreen = () => (
+    <div className="status-screen">
+      <div className="status-header">
+        <h3>Status Updates</h3>
+        <button className="icon-btn">{Icons.CAMERA}</button>
+      </div>
+      <div className="status-list">
+        {stories.map(story => (
+          <div key={story.id} className="status-item">
+            <div className="status-avatar">
+              {getUserAvatar(story.username, 'normal', true)}
+            </div>
+            <div className="status-info">
+              <span className="status-username">{story.username}</span>
+              <span className="status-time">30 minutes ago</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderCallsScreen = () => (
+    <div className="calls-screen">
+      <div className="calls-header">
+        <h3>Recent Calls</h3>
+      </div>
+      <div className="calls-list">
+        {users.slice(0, 5).map(user => (
+          <div key={user.username} className="call-item">
+            <div className="call-avatar">
+              {getUserAvatar(user.username, 'normal')}
+            </div>
+            <div className="call-info">
+              <span className="call-username">{user.username}</span>
+              <span className="call-type">Outgoing • 5:30</span>
+            </div>
+            <button className="call-btn">{Icons.CAMERA}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderProfileScreen = () => (
+    <div className="profile-screen">
+      <div className="profile-header">
+        {getUserAvatar(currentUser.username, 'xlarge')}
+        <h2>{currentUser.username}</h2>
+        <p>Welcome to your profile</p>
+      </div>
+      <div className="profile-stats">
+        <div className="stat-item">
+          <strong>125</strong>
+          <span>Posts</span>
+        </div>
+        <div className="stat-item">
+          <strong>1.2K</strong>
+          <span>Followers</span>
+        </div>
+        <div className="stat-item">
+          <strong>356</strong>
+          <span>Following</span>
+        </div>
+      </div>
+      <div className="profile-actions">
+        <button className="modern-btn primary">Edit Profile</button>
+        <button 
+          className="modern-btn secondary"
+          onClick={() => setShowImageUpload(true)}
+        >
+          Change Photo
+        </button>
+        <button className="modern-btn secondary" onClick={handleLogout}>
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderChatScreen = () => (
+    <>
+      <div className="chat-header">
+        <button className="back-btn" onClick={handleBackToChats}>
+          {Icons.BACK}
+        </button>
+        <div className="chat-user-info">
+          {getUserAvatar(selectedUser.username, 'normal')}
+          <div className="user-details">
+            <div className="username">{selectedUser.username}</div>
+            <div className="user-status">
+              {isTyping ? 'typing...' : selectedUser.online ? 'online' : 'offline'}
+            </div>
+          </div>
+        </div>
+        <div className="chat-actions">
+          <button className="icon-btn">{Icons.CAMERA}</button>
+          <button className="icon-btn">{Icons.MORE}</button>
+        </div>
+      </div>
+
+      <div className="messages-container" ref={messagesContainerRef}>
+        {filteredMessages.length === 0 ? (
+          <div className="no-messages">
+            <div className="welcome-illustration">
+              {getUserAvatar(selectedUser.username, 'xlarge')}
+            </div>
+            <h3>No messages yet</h3>
+            <p>Start a conversation with {selectedUser.username}</p>
+          </div>
+        ) : (
+          filteredMessages.map((message, index) => (
+            <div
+              key={message._id || index}
+              className={`message ${message.sender === currentUser.username ? 'sent' : 'received'}`}
+            >
+              <div className="message-content">
+                {message.content}
+              </div>
+              <div className="message-time">
+                {formatTime(message.timestamp)}
+              </div>
+            </div>
+          ))
+        )}
+        {isTyping && (
+          <div className="typing-indicator">
+            <div className="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span>typing...</span>
+          </div>
+        )}
+      </div>
+
+      <div className="message-input-container">
+        <button className="icon-btn attachment-btn">{Icons.ATTACHMENT}</button>
+        <input
+          type="text"
+          placeholder="Type a message..."
+          value={newMessage}
+          onChange={(e) => {
+            setNewMessage(e.target.value);
+            handleTyping();
+          }}
+          onKeyPress={handleKeyPress}
+          className="message-input"
+        />
+        <button 
+          onClick={sendMessage} 
+          disabled={!newMessage.trim()}
+          className="send-btn"
+        >
+          {Icons.SEND}
+        </button>
+      </div>
+    </>
+  );
+
   if (!currentUser) {
     return (
-      <div className="login-container">
-        <div className="animated-bg"></div>
-        <div className="login-box glassmorphism">
-          <div className="login-header">
-            <h2 className="gradient-text">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-            <p>{isLogin ? 'Sign in to continue chatting' : 'Join our chat community'}</p>
+      <div className="auth-container">
+        <div className="auth-background"></div>
+        <div className="auth-box">
+          <div className="auth-header">
+            <h1>ChatApp</h1>
+            <p>{isLogin ? 'Welcome back!' : 'Create your account'}</p>
           </div>
-
+          
           <form onSubmit={handleAuth} className="auth-form">
             <div className="input-group">
               <input
@@ -531,42 +699,38 @@ function App() {
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="modern-input"
+                className="auth-input"
                 required
               />
             </div>
-
+            
             <div className="input-group">
               <input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="modern-input"
+                className="auth-input"
                 required
               />
             </div>
-
+            
             <button 
               type="submit" 
-              className="modern-btn primary"
-              disabled={loading || !username.trim() || !password.trim()}
+              className="auth-button primary"
+              disabled={loading}
             >
               {loading ? '...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </button>
           </form>
-
+          
           <div className="auth-footer">
             <p>
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button 
-                type="button" 
-                className="link-btn"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setUsername('');
-                  setPassword('');
-                }}
+                type="button"
+                className="link-button"
+                onClick={() => setIsLogin(!isLogin)}
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
@@ -578,7 +742,7 @@ function App() {
   }
 
   return (
-    <div className={`app ${darkMode ? 'dark-mode' : ''} ${isMobile ? 'mobile' : 'desktop'}`}>
+    <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : 'desktop'}`}>
       {/* Hidden file input */}
       <input
         type="file"
@@ -591,7 +755,7 @@ function App() {
       {/* Profile Image Upload Modal */}
       {showImageUpload && (
         <div className="modal-overlay" onClick={() => setShowImageUpload(false)}>
-          <div className="modal-content glassmorphism" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h3>Update Profile Image</h3>
             <p>Choose a new profile picture</p>
             <div className="modal-actions">
@@ -613,458 +777,76 @@ function App() {
       )}
 
       {/* Stories Viewer */}
-      {showStories && stories[currentStoryIndex] && (
+      {showStories && (
         <div className="stories-viewer">
-          <div className="stories-viewer-header">
-            <div className="story-progress-bars">
-              {stories[currentStoryIndex].stories.map((story, index) => (
-                <div key={story.id} className="progress-bar">
+          <div className="stories-header">
+            <div className="story-progress">
+              {stories[currentStoryIndex]?.stories.map((_, index) => (
+                <div key={index} className="progress-bar">
                   <div className="progress-fill"></div>
                 </div>
               ))}
             </div>
-            <div className="story-viewer-user-info">
-              {getUserAvatar(stories[currentStoryIndex].username, 'small')}
-              <span className="story-viewer-username">{stories[currentStoryIndex].username}</span>
-              <span className="story-time">1h ago</span>
-            </div>
-            <button className="close-stories" onClick={closeStories}>
-              {Icons.CLOSE}
-            </button>
-          </div>
-          
-          <div className="story-content">
-            <div className="story-text">
-              {stories[currentStoryIndex].stories[0]?.content}
-            </div>
-          </div>
-
-          <div className="story-nav">
-            <button className="story-nav-btn prev" onClick={prevStory}></button>
-            <button className="story-nav-btn next" onClick={nextStory}></button>
-          </div>
-        </div>
-      )}
-
-      {/* Comments Section */}
-      {commentsOpen && (
-        <div className="comments-overlay">
-          <div className="comments-container glassmorphism">
-            <div className="comments-header">
-              <h3>Comments</h3>
-              <button className="close-comments" onClick={toggleComments}>
+            <div className="story-user-info">
+              {getUserAvatar(stories[currentStoryIndex]?.username, 'small')}
+              <span>{stories[currentStoryIndex]?.username}</span>
+              <button className="close-story" onClick={closeStories}>
                 {Icons.CLOSE}
               </button>
             </div>
-            <div className="comments-list" ref={commentsContainerRef}>
-              {postComments.map(comment => (
-                <div key={comment.id} className="comment-item">
-                  <div className="comment-avatar">
-                    {getUserAvatar(comment.username, 'small')}
-                  </div>
-                  <div className="comment-content">
-                    <div className="comment-header">
-                      <span className="comment-username">{comment.username}</span>
-                      <span className="comment-time">{formatTime(comment.timestamp)}</span>
-                    </div>
-                    <div className="comment-text">{comment.text}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="comment-input-container">
-              <input
-                type="text"
-                placeholder="Add a comment..."
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="comment-input"
-              />
-              <button 
-                onClick={addComment}
-                disabled={!newComment.trim()}
-                className="comment-send-btn"
-              >
-                {Icons.SEND}
-              </button>
-            </div>
+          </div>
+          <div className="story-content">
+            {stories[currentStoryIndex]?.stories[0]?.content}
+          </div>
+          <div className="story-nav">
+            <button className="nav-btn prev" onClick={prevStory}></button>
+            <button className="nav-btn next" onClick={nextStory}></button>
           </div>
         </div>
       )}
 
-      {/* Animated Background */}
-      <div className="animated-bg"></div>
-      
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="mobile-header glassmorphism">
-          <button 
-            className="menu-toggle icon-btn"
-            onClick={toggleSidebar}
-          >
-            {sidebarOpen ? Icons.CLOSE : Icons.MENU}
-          </button>
-          
-          {selectedUser ? (
-            <div className="mobile-chat-header">
-              <button 
-                className="back-btn icon-btn"
-                onClick={handleBackToChats}
-              >
-                {Icons.BACK}
-              </button>
-              <div className="chat-user-info mobile">
-                {getUserAvatar(selectedUser.username, 'small')}
-                <div className="user-details">
-                  <div className="username">{selectedUser.username}</div>
-                  <div className="typing-indicator">
-                    {isTyping ? 'typing...' : selectedUser.online ? 'online' : 'offline'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="mobile-title">
-              <h3>ChatApp</h3>
-            </div>
-          )}
-          
-          <div className="mobile-actions">
-            <button 
-              className="icon-btn"
-              onClick={() => setDarkMode(!darkMode)}
-              title="Toggle theme"
-            >
-              {darkMode ? '☀️' : '🌙'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Sidebar */}
-      <div 
-        ref={sidebarRef}
-        className={`sidebar glassmorphism ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'} ${isMobile ? 'mobile-sidebar' : ''}`}
-      >
-        <div className="sidebar-header">
-          {!isMobile && (
-            <>
-              <div className="user-profile">
-                <div className="user-avatar-wrapper">
-                  {getUserAvatar(currentUser.username, 'large', true)}
-                  <button 
-                    className="add-story-btn"
-                    title="Add to story"
-                    onClick={() => openStories()}
-                  >
-                    {Icons.ADD}
-                  </button>
-                  <button 
-                    className="edit-avatar-btn"
-                    onClick={() => setShowImageUpload(true)}
-                    title="Change profile picture"
-                  >
-                    {Icons.EDIT}
-                  </button>
-                </div>
-                <div className="user-details">
-                  <div className="username">{currentUser.username}</div>
-                  <div className="status">Online • Add to your story</div>
-                </div>
-              </div>
-              <div className="sidebar-actions">
-                <button 
-                  className="icon-btn"
-                  onClick={() => setDarkMode(!darkMode)}
-                  title="Toggle theme"
-                >
-                  {darkMode ? '☀️' : '🌙'}
-                </button>
-                <button 
-                  className="icon-btn"
-                  onClick={handleLogout}
-                  title="Logout"
-                >
-                  {Icons.LOGOUT}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Stories Section */}
-        <div className="stories-section">
-          <div className="stories-container">
-            <h4 className="stories-title">Stories</h4>
-            <button className="see-all-btn">See all</button>
-          </div>
-          <div className="stories-list">
-            <div className="story-item your-story" onClick={() => openStories()}>
-              <div className="story-avatar-wrapper">
-                {getUserAvatar(currentUser.username, 'large', false)}
-                <div className="add-story-icon">+</div>
-              </div>
-              <div className="story-username">Your story</div>
-            </div>
-            {stories.slice(0, 6).map((story, index) => (
-              <div 
-                key={story.id} 
-                className={`story-item ${story.seen ? 'seen' : 'unseen'}`}
-                onClick={() => openStories(index)}
-              >
-                <div className="story-avatar-wrapper">
-                  {getUserAvatar(story.username, 'large', true)}
-                </div>
-                <div className="story-username">{story.username}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="search-box">
-          <div className="search-icon">{Icons.SEARCH}</div>
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-
-        <div className="sidebar-tabs">
-          <button 
-            className={`tab-btn ${activeTab === 'chats' ? 'active' : ''}`}
-            onClick={() => setActiveTab('chats')}
-          >
-            Chats
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'calls' ? 'active' : ''}`}
-            onClick={() => setActiveTab('calls')}
-          >
-            Calls
-          </button>
-          <button 
-            className={`tab-btn ${activeTab === 'status' ? 'active' : ''}`}
-            onClick={() => setActiveTab('status')}
-          >
-            Status
-          </button>
-        </div>
-
-        <div className="users-list">
-          {filteredUsers.map(user => (
-            <div
-              key={user.username}
-              className={`user-item ${selectedUser?.username === user.username ? 'selected' : ''}`}
-              onClick={() => selectUser(user)}
-            >
-              <div className="user-avatar-wrapper">
-                {getUserAvatar(user.username, 'normal', true)}
-              </div>
-              <div className="user-info">
-                <div className="username">{user.username}</div>
-                <div className="last-seen">
-                  {user.online ? 'Online now' : `Last seen ${new Date().toLocaleTimeString()}`}
-                </div>
-              </div>
-              {user.online && <div className="online-pulse"></div>}
-            </div>
-          ))}
-        </div>
-
-        {/* Mobile sidebar footer */}
-        {isMobile && (
-          <div className="mobile-sidebar-footer">
-            <button 
-              className="mobile-logout-btn modern-btn secondary"
-              onClick={handleLogout}
-            >
-              {Icons.LOGOUT} Logout
-            </button>
-          </div>
-        )}
+      {/* Main App Layout */}
+      <div className="app-content">
+        {selectedUser ? renderChatScreen() : renderContent()}
       </div>
 
-      {/* Overlay for mobile sidebar */}
-      {isMobile && sidebarOpen && (
-        <div 
-          className="sidebar-overlay"
-          onClick={() => setSidebarOpen(false)}
-        />
+      {/* Static Bottom Navigation Bar */}
+      {!selectedUser && (
+        <nav className="bottom-nav">
+          <button 
+            className={`nav-item ${activeNav === 'chats' ? 'active' : ''}`}
+            onClick={() => setActiveNav('chats')}
+          >
+            <span className="nav-icon">{Icons.CHAT}</span>
+            <span className="nav-label">Chats</span>
+            {unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+          </button>
+          
+          <button 
+            className={`nav-item ${activeNav === 'status' ? 'active' : ''}`}
+            onClick={() => setActiveNav('status')}
+          >
+            <span className="nav-icon">{Icons.STORY}</span>
+            <span className="nav-label">Status</span>
+          </button>
+          
+          <button 
+            className={`nav-item ${activeNav === 'calls' ? 'active' : ''}`}
+            onClick={() => setActiveNav('calls')}
+          >
+            <span className="nav-icon">{Icons.CAMERA}</span>
+            <span className="nav-label">Calls</span>
+          </button>
+          
+          <button 
+            className={`nav-item ${activeNav === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveNav('profile')}
+          >
+            <span className="nav-icon">{Icons.PROFILE}</span>
+            <span className="nav-label">Profile</span>
+          </button>
+        </nav>
       )}
-
-      {/* Chat Area */}
-      <div className={`chat-area ${selectedUser ? 'chat-active' : 'no-chat'} ${isMobile ? 'mobile-chat' : ''}`}>
-        {selectedUser ? (
-          <>
-            {/* Desktop Chat Header */}
-            {!isMobile && (
-              <div className="chat-header glassmorphism">
-                <div className="chat-user-info">
-                  {getUserAvatar(selectedUser.username, 'normal', true)}
-                  <div className="user-details">
-                    <div className="username">{selectedUser.username}</div>
-                    <div className="typing-indicator">
-                      {isTyping ? `${selectedUser.username} is typing...` : selectedUser.online ? 'Online' : 'Offline'}
-                    </div>
-                  </div>
-                </div>
-                <div className="chat-actions">
-                  <button className="icon-btn" title="More options">
-                    {Icons.MORE}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="messages-container" ref={messagesContainerRef}>
-              {filteredMessages.length === 0 ? (
-                <div className="no-messages">
-                  <div className="welcome-illustration">
-                    {getUserAvatar(selectedUser.username, 'xlarge', true)}
-                  </div>
-                  <h3>{selectedUser.username}</h3>
-                  <p>Instagram • Active today</p>
-                  <button className="modern-btn secondary">
-                    View Profile
-                  </button>
-                </div>
-              ) : (
-                filteredMessages.map((message, index) => (
-                  <div
-                    key={message._id || index}
-                    className={`message ${message.sender === currentUser.username ? 'sent' : 'received'}`}
-                  >
-                    {message.sender !== currentUser.username && (
-                      <div className="message-avatar">
-                        {getUserAvatar(message.sender, 'small', true)}
-                      </div>
-                    )}
-                    <div className="message-content-wrapper">
-                      <div className="message-content">
-                        {message.content}
-                      </div>
-                      <div className="message-time">
-                        {formatTime(message.timestamp)}
-                      </div>
-                    </div>
-                    {message.sender === currentUser.username && (
-                      <div className="message-status">
-                        {message.read ? '✓✓' : '✓✓'}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} className="scroll-anchor" />
-            </div>
-
-            {isTyping && (
-              <div className="typing-bubble">
-                <div className="typing-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <span>{selectedUser.username} is typing</span>
-              </div>
-            )}
-
-            <div className="message-input-container glassmorphism">
-              <div className="input-actions">
-                <button className="icon-btn" title="Add to story">
-                  {Icons.STORY}
-                </button>
-                <button className="icon-btn" title="Attach file">
-                  {Icons.ATTACHMENT}
-                </button>
-              </div>
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder={`Message ${selectedUser.username}...`}
-                value={newMessage}
-                onChange={(e) => {
-                  setNewMessage(e.target.value);
-                  handleTyping();
-                }}
-                onKeyPress={handleKeyPress}
-                className="message-input"
-              />
-              <button 
-                onClick={sendMessage} 
-                disabled={!newMessage.trim()}
-                className="send-btn"
-                title="Send message"
-              >
-                <span className="send-icon">{Icons.SEND}</span>
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="no-chat-selected">
-            <div className="welcome-content">
-              <div className="instagram-style-profile">
-                {getUserAvatar(currentUser.username, 'xlarge', true)}
-                <h2>{currentUser.username}</h2>
-                <p>Welcome to your Instagram-style chat</p>
-                <div className="profile-stats">
-                  <div className="stat">
-                    <strong>125</strong>
-                    <span>Posts</span>
-                  </div>
-                  <div className="stat">
-                    <strong>1.2K</strong>
-                    <span>Followers</span>
-                  </div>
-                  <div className="stat">
-                    <strong>356</strong>
-                    <span>Following</span>
-                  </div>
-                </div>
-                <div className="profile-actions">
-                  <button className="modern-btn secondary">Edit Profile</button>
-                  <button className="modern-btn secondary">Share Profile</button>
-                  <button className="modern-btn secondary" onClick={toggleComments}>
-                    {Icons.COMMENT} Comments
-                  </button>
-                </div>
-
-                {/* Sample Post with Comments */}
-                <div className="sample-post glassmorphism">
-                  <div className="post-header">
-                    {getUserAvatar(currentUser.username, 'small')}
-                    <div className="post-user-info">
-                      <span className="post-username">{currentUser.username}</span>
-                      <span className="post-time">2 hours ago</span>
-                    </div>
-                  </div>
-                  <div className="post-content">
-                    <p>Beautiful day for coding! 🚀 Working on this amazing chat app with React and Socket.io! ✨</p>
-                  </div>
-                  <div className="post-actions">
-                    <button className="post-action-btn">
-                      {Icons.HEART} 24
-                    </button>
-                    <button className="post-action-btn" onClick={toggleComments}>
-                      {Icons.COMMENT} 3
-                    </button>
-                    <button className="post-action-btn">
-                      {Icons.SHARE} Share
-                    </button>
-                    <button className="post-action-btn">
-                      {Icons.SAVE} Save
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
