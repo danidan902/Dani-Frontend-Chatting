@@ -10,11 +10,11 @@ const Icons = {
   OFFLINE: '⚫',
   TYPING: '✍️',
   SEARCH: '🔍',
-  ATTACHMENT: '📎',
-  EMOJI: '😊',
+  
+ 
   MENU: '☰',
   CLOSE: '✕',
-  CAMERA: '📷',
+  
   EDIT: '✏️',
   LOGOUT: '🚪',
   BACK: '←',
