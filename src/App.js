@@ -177,7 +177,7 @@ function App() {
       console.log('📩 New message received:', message);
       setMessages(prev => [...prev, message]);
       
-      // Add message effect
+      
       setMessageEffects(prev => ({
         ...prev,
         [message._id || Date.now()]: 'pop'
@@ -551,8 +551,6 @@ function App() {
       </div>
     );
   };
-
-  // Render different screens based on activeNav
   const renderContent = () => {
     switch (activeNav) {
       case 'chats':
@@ -589,7 +587,7 @@ function App() {
         </div>
       </div>
 
-      {/* Stories Section */}
+    
       <div className="stories-section magical-section">
         <div className="stories-container">
           <div className="your-story-item magical-card" onClick={() => openStories()}>
@@ -966,7 +964,6 @@ function App() {
         </div>
       )}
 
-      {/* Stories Viewer */}
       {showStories && (
         <div className="stories-viewer">
           <div className="stories-header">
