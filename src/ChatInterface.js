@@ -29,7 +29,7 @@ const Icons = {
 };
 
 // Connect to server
-const socket = io('http://localhost:5000');
+const socket = io('https://dani-chat.onrender.com');
 
 function ChatInterface({ currentUser, onLogout, onNavigateToHome }) {
   const [users, setUsers] = useState([]);
@@ -56,7 +56,7 @@ function ChatInterface({ currentUser, onLogout, onNavigateToHome }) {
   const sidebarRef = useRef(null);
   const navigate = useNavigate();
 
-  const BASE_URL = 'http://localhost:5000';
+  const BASE_URL = 'https://dani-chat.onrender.com';
 
   // Socket connection and event listeners
   useEffect(() => {
